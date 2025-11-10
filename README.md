@@ -90,16 +90,38 @@ Use these credentials to test different user roles:
 - Site options: Pantry Area, Office Area, Reception Area, Entry Area
 - Active cameras only
 
-### 6. Zone Editor
-- **Crowd Detection**: Polygon drawing
-  - Click to add points
-  - Double-click to close polygon
+### 6. Zone Editor (Enhanced)
+- **Two-Pane Layout**:
+  - Left: Camera preview area with media upload and live feed toggle
+  - Right: Drawing toolbar with all controls organized vertically
+- **Media Upload**:
+  - Upload images (.jpg, .png, .jpeg, .webp) or videos (.mp4)
+  - File size validation (< 50MB)
+  - Instant preview after upload
+- **Video Support**:
+  - Play/pause controls
+  - Timeline scrubber to select frame for drawing
+  - Current time display
+  - Snapshot capture from current frame
+- **Drawing Tools**:
+  - **Crowd Detection**: Polygon drawing
+    - Click to add points
+    - Double-click to close polygon
+    - Drag vertex handles to adjust points
+  - **Intrusion Detection**: Line drawing
+    - Click start and end points
+    - Drag endpoints to adjust line
   - Visual feedback with cyan highlighting
-- **Intrusion Detection**: Line drawing
-  - Click start and end points
-  - Define intrusion boundaries
-- Edit, undo, and clear functionality
-- Normalized coordinates (0-1 range) for responsive scaling
+- **Advanced Features**:
+  - Draggable vertex handles for editing zones
+  - Live feed toggle (placeholder mode)
+  - Snapshot capture for video frames
+  - Edit, undo, and clear functionality
+  - Normalized coordinates (0-1 range) for responsive scaling
+- **UI/UX**:
+  - Status display (points count, drawing state)
+  - Mode indicator (Polygon or Line)
+  - Disabled states for unavailable actions
 
 ### 7. Upload & Simulate
 - Upload images (JPG, PNG) and videos (MP4, WEBM)
@@ -193,9 +215,49 @@ npm run test:coverage
 ```
 
 ### Test Coverage
-- ZoneEditor: Draw, save, and edit polygon/line zones
+- ZoneEditor: Draw, save, and edit polygon/line zones with draggable handles
+- ZoneEditor: Media upload (images and videos) with validation
+- ZoneEditor: Video playback controls and frame scrubbing
+- ZoneEditor: Snapshot capture functionality
 - Upload: Media upload and simulation triggers
 - Storybook stories for ZoneEditor component
+
+### Testing Drawing & Upload Locally
+
+1. **Test Image Upload**:
+   - Navigate to Configuration → Add Configuration
+   - Fill in Camera, Site, and Threshold
+   - Click "Next: Draw Zone"
+   - Click "Upload Image/Video" and select a .jpg or .png file
+   - Verify the image appears in the preview area
+   - Click "Start Drawing" and add points by clicking on the image
+   - Drag the vertex handles to adjust points
+   - Click "Save Zone"
+
+2. **Test Video Upload**:
+   - Follow the same steps as image upload but select a .mp4 file
+   - Use play/pause controls to navigate the video
+   - Drag the timeline scrubber to select a specific frame
+   - Click "Snapshot" to capture the current frame
+   - Draw zones on the captured frame
+   - Click "Save Zone"
+
+3. **Test Live Feed Toggle**:
+   - Enable the "Live Feed" toggle
+   - Verify the live feed placeholder appears
+   - Draw zones on the placeholder
+   - Click "Save Zone"
+
+4. **Test Draggable Handles**:
+   - After drawing a polygon or line, hover over the vertex points
+   - Cursor should change to a "move" cursor
+   - Click and drag the points to adjust the zone shape
+   - Verify the zone updates in real-time
+
+5. **Verify Alert Generation**:
+   - After saving a zone, navigate to the Alerts page
+   - Verify a new alert appears with the zone name, camera, and type
+   - Check that the snapshot (if captured) is included in the alert details
 
 ## 📚 Storybook
 

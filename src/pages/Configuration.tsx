@@ -197,7 +197,7 @@ export default function Configuration() {
       </Tabs>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingConfig ? 'Edit Configuration' : 'Add New Configuration'}
