@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useConfigStore, type Configuration } from '@/stores/configStore';
+import { useAlertStore } from '@/stores/alertStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +18,7 @@ type ConfigType = 'crowd_detection' | 'intrusion_detection';
 
 export default function Configuration() {
   const { configurations, addConfiguration, updateConfiguration, deleteConfiguration } = useConfigStore();
+  const { addAlert } = useAlertStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [configStep, setConfigStep] = useState(1);
   const [configType, setConfigType] = useState<ConfigType>('crowd_detection');
@@ -58,13 +60,27 @@ export default function Configuration() {
       updateConfiguration(editingConfig.id, zone);
       setEditingConfig(null);
     } else {
-      addConfiguration({
+      const newConfig = {
         type: configType,
         cameraId: selectedCamera,
         cameraName: camera.name,
         site: selectedSite,
         threshold: parseInt(threshold),
         zone,
+      };
+      addConfiguration(newConfig);
+
+      // Auto-generate alert for the new configuration
+      addAlert({
+        type: configType === 'crowd_detection' ? 'crowd_detection' : 'intrusion_alert',
+        cameraId: selectedCamera,
+        cameraName: camera.name,
+        zoneId: `zone-${Date.now()}`,
+        zoneName: `${configType === 'crowd_detection' ? 'Crowd Zone' : 'Intrusion Line'} - ${camera.name}`,
+        count: configType === 'crowd_detection' ? parseInt(threshold) : undefined,
+        severity: 'Medium',
+        timestamp: new Date().toISOString(),
+        snapshotUrl: camera.streamUrl || '/placeholder.svg',
       });
     }
 

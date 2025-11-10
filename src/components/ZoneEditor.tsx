@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
 import { Stage, Layer, Line, Circle, Image as KonvaImage } from 'react-konva';
 import { Button } from './ui/button';
-import { Undo, Save, Trash2 } from 'lucide-react';
+import { Undo, Save, Trash2, Upload, Pencil } from 'lucide-react';
 import { ZonePoint } from '@/stores/configStore';
 import Konva from 'konva';
+import { toast } from 'sonner';
 
 interface ZoneEditorProps {
   imageUrl: string;
@@ -18,11 +19,14 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
   const [isDrawing, setIsDrawing] = useState(false);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [uploadedMedia, setUploadedMedia] = useState<string | null>(null);
+  const [drawingEnabled, setDrawingEnabled] = useState(initialZone.length > 0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const img = new window.Image();
-    img.src = imageUrl;
+    img.src = uploadedMedia || imageUrl;
     img.onload = () => {
       setImage(img);
       
@@ -36,9 +40,28 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
         });
       }
     };
-  }, [imageUrl]);
+  }, [imageUrl, uploadedMedia]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      toast.error('Please upload an image or video file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setUploadedMedia(result);
+      toast.success('Media uploaded successfully');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!drawingEnabled) return;
     if (e.target !== e.target.getStage()) return;
 
     const stage = e.target.getStage();
@@ -103,10 +126,36 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleUndo} disabled={points.length === 0}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Media
+          </Button>
+          {!drawingEnabled && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setDrawingEnabled(true)}
+              disabled={!image}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Start Drawing
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleUndo} disabled={points.length === 0 || !drawingEnabled}>
             <Undo className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleClear} disabled={points.length === 0}>
+          <Button variant="outline" size="sm" onClick={handleClear} disabled={points.length === 0 || !drawingEnabled}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -118,7 +167,7 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
           height={dimensions.height}
           onClick={handleStageClick}
           onDblClick={handleDoubleClick}
-          className="cursor-crosshair"
+          className={drawingEnabled ? "cursor-crosshair" : "cursor-default"}
         >
           <Layer>
             {image && <KonvaImage image={image} width={dimensions.width} height={dimensions.height} />}
