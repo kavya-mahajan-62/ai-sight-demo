@@ -45,6 +45,11 @@ export default function Configuration() {
     }
   };
 
+  const getSelectedCameraImage = () => {
+    const camera = cameras.find((c) => c.id === selectedCamera);
+    return camera?.streamUrl || '/placeholder.svg';
+  };
+
   const handleSaveZone = (zone: any) => {
     const camera = cameras.find((c) => c.id === selectedCamera);
     if (!camera) return;
@@ -240,17 +245,27 @@ export default function Configuration() {
               </div>
             </div>
           ) : (
-            <ZoneEditor
-              imageUrl="/placeholder.svg"
-              initialZone={editingConfig?.zone}
-              mode={configType === 'crowd_detection' ? 'polygon' : 'line'}
-              onSave={handleSaveZone}
-              onCancel={() => {
-                setIsAddDialogOpen(false);
-                setConfigStep(1);
-                setEditingConfig(null);
-              }}
-            />
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow" />
+                  <p className="text-sm font-medium">
+                    {cameras.find((c) => c.id === selectedCamera)?.name} - {selectedSite}
+                  </p>
+                </div>
+              </div>
+              <ZoneEditor
+                imageUrl={getSelectedCameraImage()}
+                initialZone={editingConfig?.zone}
+                mode={configType === 'crowd_detection' ? 'polygon' : 'line'}
+                onSave={handleSaveZone}
+                onCancel={() => {
+                  setIsAddDialogOpen(false);
+                  setConfigStep(1);
+                  setEditingConfig(null);
+                }}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

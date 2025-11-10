@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Alerts from "./pages/Alerts";
 import Configuration from "./pages/Configuration";
+import Sites from "./pages/Sites";
 import Upload from "./pages/Upload";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/configuration" element={<Configuration />} />
+            <Route path="/sites" element={<Sites />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
