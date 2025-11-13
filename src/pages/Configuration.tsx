@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useConfigStore, type Configuration } from '@/stores/configStore';
 import { useAlertStore } from '@/stores/alertStore';
+import { useSiteStore } from '@/stores/siteStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,27 +10,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Users, Shield } from 'lucide-react';
-import { getActiveCameras, SITES } from '@/lib/mockData';
+import { Plus, Pencil, Trash2, Users, Shield, Upload } from 'lucide-react';
 import { ZoneEditor } from '@/components/ZoneEditor';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 type ConfigType = 'crowd_detection' | 'intrusion_detection';
 
 export default function Configuration() {
   const { configurations, addConfiguration, updateConfiguration, deleteConfiguration } = useConfigStore();
   const { addAlert } = useAlertStore();
+  const { sites } = useSiteStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [configStep, setConfigStep] = useState(1);
   const [configType, setConfigType] = useState<ConfigType>('crowd_detection');
   const [editingConfig, setEditingConfig] = useState<Configuration | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [selectedCamera, setSelectedCamera] = useState('');
   const [selectedSite, setSelectedSite] = useState('');
   const [threshold, setThreshold] = useState('30');
+  const [uploadedPreview, setUploadedPreview] = useState<string>('');
 
-  const cameras = getActiveCameras();
+  // Get all cameras from all sites
+  const allCameras = sites.flatMap(site => 
+    site.cameras.map(cam => ({ ...cam, siteName: site.name, siteId: site.id }))
+  );
+
+  // Filter cameras by selected site
+  const filteredCameras = selectedSite
+    ? allCameras.filter(cam => cam.siteId === selectedSite)
+    : [];
+
   const crowdConfigs = configurations.filter((c) => c.type === 'crowd_detection');
   const intrusionConfigs = configurations.filter((c) => c.type === 'intrusion_detection');
 
@@ -39,6 +52,37 @@ export default function Configuration() {
     setSelectedCamera('');
     setSelectedSite('');
     setThreshold('30');
+    setUploadedPreview('');
+  };
+
+  const handleSiteChange = (siteId: string) => {
+    setSelectedSite(siteId);
+    setSelectedCamera(''); // Reset camera when site changes
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+
+    if (file.size > maxSize) {
+      toast.error('File is too large. Maximum size is 50MB.');
+      return;
+    }
+
+    if (!validTypes.includes(file.type)) {
+      toast.error('Unsupported file format.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadedPreview(event.target?.result as string);
+      toast.success('Media uploaded successfully');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleNextStep = () => {
@@ -48,13 +92,27 @@ export default function Configuration() {
   };
 
   const getSelectedCameraImage = () => {
-    const camera = cameras.find((c) => c.id === selectedCamera);
-    return camera?.streamUrl || '/placeholder.svg';
+    // Use uploaded preview first, then camera's uploaded media, then streamUrl, finally placeholder
+    if (uploadedPreview) return uploadedPreview;
+    
+    const camera = allCameras.find((c) => c.id === selectedCamera);
+    if (!camera) return '/placeholder.svg';
+    
+    // Use first uploaded media if available
+    if (camera.uploadedMedia && camera.uploadedMedia.length > 0) {
+      return camera.uploadedMedia[0];
+    }
+    
+    return camera.streamUrl || '/placeholder.svg';
   };
 
   const handleSaveZone = (zone: any) => {
-    const camera = cameras.find((c) => c.id === selectedCamera);
+    const camera = allCameras.find((c) => c.id === selectedCamera);
     if (!camera) return;
+
+    const snapshotUrl = uploadedPreview || 
+      (camera.uploadedMedia && camera.uploadedMedia.length > 0 ? camera.uploadedMedia[0] : camera.streamUrl) || 
+      '/placeholder.svg';
 
     if (editingConfig) {
       updateConfiguration(editingConfig.id, zone);
@@ -80,12 +138,13 @@ export default function Configuration() {
         count: configType === 'crowd_detection' ? parseInt(threshold) : undefined,
         severity: 'Medium',
         timestamp: new Date().toISOString(),
-        snapshotUrl: camera.streamUrl || '/placeholder.svg',
+        snapshotUrl: snapshotUrl,
       });
     }
 
     setIsAddDialogOpen(false);
     setConfigStep(1);
+    setUploadedPreview('');
   };
 
   const handleAnnotate = (config: Configuration) => {
@@ -207,15 +266,15 @@ export default function Configuration() {
           {configStep === 1 ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="camera">Select Camera</Label>
-                <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                <Label htmlFor="site">Select Site</Label>
+                <Select value={selectedSite} onValueChange={handleSiteChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a camera" />
+                    <SelectValue placeholder="Choose a site" />
                   </SelectTrigger>
                   <SelectContent>
-                    {cameras.map((camera) => (
-                      <SelectItem key={camera.id} value={camera.id}>
-                        {camera.name}
+                    {sites.map((site) => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -223,15 +282,19 @@ export default function Configuration() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="site">Site</Label>
-                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                <Label htmlFor="camera">Select Camera</Label>
+                <Select 
+                  value={selectedCamera} 
+                  onValueChange={setSelectedCamera}
+                  disabled={!selectedSite}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a site" />
+                    <SelectValue placeholder={selectedSite ? "Choose a camera" : "Select a site first"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {SITES.map((site) => (
-                      <SelectItem key={site} value={site}>
-                        {site}
+                    {filteredCameras.map((camera) => (
+                      <SelectItem key={camera.id} value={camera.id}>
+                        {camera.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -263,11 +326,28 @@ export default function Configuration() {
           ) : (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-muted p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow" />
-                  <p className="text-sm font-medium">
-                    {cameras.find((c) => c.id === selectedCamera)?.name} - {selectedSite}
-                  </p>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow" />
+                    <p className="text-sm font-medium">
+                      {allCameras.find((c) => c.id === selectedCamera)?.name} - {sites.find(s => s.id === selectedSite)?.name}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Media
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,.mp4,.webm"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
                 </div>
               </div>
               <ZoneEditor
@@ -279,6 +359,7 @@ export default function Configuration() {
                   setIsAddDialogOpen(false);
                   setConfigStep(1);
                   setEditingConfig(null);
+                  setUploadedPreview('');
                 }}
               />
             </div>

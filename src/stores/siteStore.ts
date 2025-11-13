@@ -6,6 +6,7 @@ export interface SiteCamera {
   name: string;
   cameraId: string;
   streamUrl: string;
+  uploadedMedia?: string[]; // Array of base64 encoded media files
   active: boolean;
   siteId: string;
 }

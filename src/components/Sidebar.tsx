@@ -5,7 +5,6 @@ import {
   BarChart3,
   AlertTriangle,
   Settings,
-  Upload,
   Video,
   Shield,
   Building2,
@@ -18,7 +17,6 @@ const navigation = [
   { name: 'Alerts', to: '/alerts', icon: AlertTriangle, roles: ['Admin', 'Security', 'Viewer'] },
   { name: 'Configuration', to: '/configuration', icon: Settings, roles: ['Admin', 'Security'] },
   { name: 'Site Management', to: '/sites', icon: Building2, roles: ['Admin'] },
-  { name: 'Upload', to: '/upload', icon: Upload, roles: ['Admin', 'Security'] },
   { name: 'Settings', to: '/settings', icon: Video, roles: ['Admin', 'Security', 'Viewer'] },
 ];
 
