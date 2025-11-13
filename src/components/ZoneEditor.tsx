@@ -1,62 +1,61 @@
 import { useRef, useState, useEffect } from 'react';
 import { Stage, Layer, Line, Circle, Image as KonvaImage } from 'react-konva';
 import { Button } from './ui/button';
-import { Undo, Save, Trash2, Upload, Pencil, Camera, Play, Pause, Image as ImageIcon } from 'lucide-react';
+import { Undo, Save, Trash2, Pencil, Camera, Play, Pause } from 'lucide-react';
 import { ZonePoint } from '@/stores/configStore';
 import Konva from 'konva';
 import { toast } from 'sonner';
 import { Label } from './ui/label';
-import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 interface ZoneEditorProps {
-  imageUrl: string;
+  imageUrl: string | null;
   initialZone?: ZonePoint[];
   mode: 'polygon' | 'line';
-  onSave: (zone: ZonePoint[]) => void;
+  onSave: (zone: ZonePoint[], snapshotUrl?: string) => void;
   onCancel: () => void;
+  cameraName?: string;
 }
 
-export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel }: ZoneEditorProps) => {
+export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel, cameraName }: ZoneEditorProps) => {
   const [points, setPoints] = useState<ZonePoint[]>(initialZone);
   const [isDrawing, setIsDrawing] = useState(false);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 450 });
-  const [uploadedMedia, setUploadedMedia] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
-  const [useLiveFeed, setUseLiveFeed] = useState(false);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [drawingEnabled, setDrawingEnabled] = useState(initialZone.length > 0);
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [capturedSnapshot, setCapturedSnapshot] = useState<string | null>(null);
+  const [hasMedia, setHasMedia] = useState(false);
   
-  const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasSnapshotRef = useRef<HTMLCanvasElement>(null);
 
+  // Load image or video from camera
   useEffect(() => {
-    if (useLiveFeed) {
-      // Use live feed placeholder
-      const img = new window.Image();
-      img.src = imageUrl;
-      img.onload = () => {
-        setImage(img);
-        setDimensions({ width: 600, height: 450 });
-      };
+    if (!imageUrl) {
+      setHasMedia(false);
       return;
     }
 
-    if (mediaType === 'video' && uploadedMedia) {
-      // For video, capture frame as image
+    setHasMedia(true);
+
+    // Detect if it's a video
+    const isVideo = imageUrl.includes('video') || imageUrl.endsWith('.mp4') || imageUrl.endsWith('.webm') || imageUrl.startsWith('data:video');
+    setMediaType(isVideo ? 'video' : 'image');
+
+    if (isVideo) {
+      // Video will be handled by video element
       return;
     }
 
-    // Load image
     const img = new window.Image();
-    img.src = uploadedMedia || imageUrl;
+    img.src = imageUrl;
     img.onload = () => {
       setImage(img);
       const aspectRatio = img.height / img.width;
@@ -65,35 +64,31 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
         width,
         height: width * aspectRatio,
       });
+      toast.success('Media loaded');
     };
-  }, [imageUrl, uploadedMedia, useLiveFeed, mediaType]);
+    img.onerror = () => {
+      toast.error('Failed to load media');
+    };
+  }, [imageUrl]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReplaceMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (50MB limit)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error('File size must be less than 50MB');
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+
+    if (file.size > maxSize) {
+      toast.error('File is too large. Maximum size is 50MB.');
       return;
     }
 
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      toast.error('Please upload an image or video file');
+    if (!validTypes.includes(file.type)) {
+      toast.error('Unsupported file format.');
       return;
     }
 
-    const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-    setMediaType(fileType);
-    setUseLiveFeed(false);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setUploadedMedia(result);
-      toast.success(`${fileType === 'video' ? 'Video' : 'Image'} uploaded successfully`);
-    };
-    reader.readAsDataURL(file);
+    toast.info('Media replacement is not yet implemented. Please add media via Site Management.');
   };
 
   const handleVideoTimeUpdate = () => {
@@ -155,10 +150,34 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
   };
 
   const handleCaptureSnapshot = () => {
-    if (!canvasSnapshotRef.current) return;
-    const dataUrl = canvasSnapshotRef.current.toDataURL('image/png');
-    setCapturedSnapshot(dataUrl);
-    toast.success('Snapshot captured successfully');
+    if (mediaType === 'video' && videoRef.current && canvasSnapshotRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasSnapshotRef.current;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        const snapshotUrl = canvas.toDataURL('image/jpeg');
+        setCapturedSnapshot(snapshotUrl);
+        
+        // Load snapshot as the drawing background
+        const img = new window.Image();
+        img.onload = () => {
+          setImage(img);
+          setDimensions({ width: Math.min(600, img.width), height: Math.min(450, img.height) });
+        };
+        img.src = snapshotUrl;
+        
+        toast.success('Snapshot captured');
+      }
+    } else if (image) {
+      // For images, just mark as captured
+      setCapturedSnapshot(imageUrl || '');
+      toast.success('Image ready for drawing');
+    }
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -220,13 +239,15 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
   };
 
   const handleSave = () => {
-    if ((mode === 'polygon' && points.length >= 3) || (mode === 'line' && points.length === 2)) {
-      onSave(points);
-      if (capturedSnapshot) {
-        // Snapshot will be used in alerts
-        toast.success('Zone saved with snapshot');
-      }
+    if (mode === 'polygon' && points.length < 3) {
+      toast.error('Polygon must have at least 3 points');
+      return;
     }
+    if (mode === 'line' && points.length !== 2) {
+      toast.error('Line must have exactly 2 points');
+      return;
+    }
+    onSave(points, capturedSnapshot || undefined);
   };
 
   const formatTime = (seconds: number) => {
@@ -235,284 +256,246 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const flattenedPoints = points.flatMap((p) => [p.x * dimensions.width, p.y * dimensions.height]);
-  const canSave = (mode === 'polygon' && points.length >= 3) || (mode === 'line' && points.length === 2);
+  const renderMedia = () => {
+    if (!imageUrl) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[450px] bg-muted rounded-lg border-2 border-dashed border-border">
+          <p className="text-sm text-muted-foreground mb-2">No media available</p>
+          <p className="text-xs text-muted-foreground">Add media via Site Management</p>
+        </div>
+      );
+    }
 
-  return (
-    <div ref={containerRef} className="flex gap-6">
-      {/* Left Pane: Camera Preview */}
-      <div className="flex-1 space-y-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Camera Preview</h3>
-            <div className="flex items-center gap-3">
-              <Label htmlFor="live-feed" className="text-sm">Live Feed</Label>
-              <Switch
-                id="live-feed"
-                checked={useLiveFeed}
-                onCheckedChange={(checked) => {
-                  setUseLiveFeed(checked);
-                  if (checked) {
-                    setUploadedMedia(null);
-                    setMediaType(null);
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {!uploadedMedia && !useLiveFeed && (
-            <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,.mp4"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+    if (mediaType === 'video') {
+      return (
+        <div className="space-y-2">
+          <video
+            ref={videoRef}
+            src={imageUrl}
+            className="w-full h-auto rounded-lg"
+            onLoadedMetadata={handleVideoLoadedMetadata}
+            onTimeUpdate={handleVideoTimeUpdate}
+          />
+          <div className="space-y-2 p-2 bg-muted rounded">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
+                onClick={handlePlayPause}
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Image/Video
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
-            </div>
-          )}
-
-          {uploadedMedia && mediaType === 'video' && (
-            <div className="space-y-2">
-              <video
-                ref={videoRef}
-                src={uploadedMedia}
-                className="hidden"
-                onTimeUpdate={handleVideoTimeUpdate}
-                onLoadedMetadata={handleVideoLoadedMetadata}
-              />
-              <canvas ref={canvasSnapshotRef} className="hidden" />
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePlayPause}
-                >
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {formatTime(videoCurrentTime)} / {formatTime(videoDuration)}
-                </span>
+              <div className="flex-1">
+                <input
+                  type="range"
+                  min="0"
+                  max={videoDuration}
+                  value={videoCurrentTime}
+                  onChange={handleVideoSeek}
+                  className="w-full"
+                />
               </div>
-
-              <input
-                type="range"
-                min="0"
-                max={videoDuration || 0}
-                step="0.1"
-                value={videoCurrentTime}
-                onChange={handleVideoSeek}
-                className="w-full"
-              />
+              <span className="text-xs text-muted-foreground min-w-[80px]">
+                {formatTime(videoCurrentTime)} / {formatTime(videoDuration)}
+              </span>
             </div>
-          )}
+          </div>
         </div>
+      );
+    }
 
-        <div className="overflow-hidden rounded-lg border border-border bg-muted/50">
-          {!image ? (
-            <div className="flex items-center justify-center h-[450px] bg-muted">
-              <div className="text-center space-y-2">
-                <Camera className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  {useLiveFeed ? 'Live feed placeholder' : 'Upload media or enable live feed'}
-                </p>
-              </div>
+    return null;
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left: Camera Preview */}
+      <div className="lg:col-span-2 space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {cameraName || 'Camera Preview'}
+              </CardTitle>
+              {hasMedia && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Replace media
+                </Button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.mp4,.webm"
+                className="hidden"
+                onChange={handleReplaceMedia}
+              />
             </div>
-          ) : (
-            <Stage
-              width={dimensions.width}
-              height={dimensions.height}
-              onClick={handleStageClick}
-              onDblClick={handleDoubleClick}
-              className={drawingEnabled ? "cursor-crosshair" : "cursor-default"}
-            >
-              <Layer>
-                {image && (
-                  <KonvaImage
-                    image={image}
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              {renderMedia()}
+              {(image || mediaType === 'video') && (
+                <div className="mt-4">
+                  <Stage
                     width={dimensions.width}
                     height={dimensions.height}
-                    name="background-image"
-                  />
-                )}
-                
-                {points.length > 0 && (
-                  <>
-                    <Line
-                      points={flattenedPoints}
-                      stroke="hsl(195, 92%, 48%)"
-                      strokeWidth={3}
-                      lineCap="round"
-                      lineJoin="round"
-                      closed={mode === 'polygon' && !isDrawing}
-                      fill={mode === 'polygon' && !isDrawing ? 'rgba(0, 212, 255, 0.2)' : undefined}
-                    />
-                    {points.map((point, i) => (
-                      <Circle
-                        key={i}
-                        x={point.x * dimensions.width}
-                        y={point.y * dimensions.height}
-                        radius={8}
-                        fill="hsl(195, 92%, 48%)"
-                        stroke="hsl(0, 0%, 100%)"
-                        strokeWidth={2}
-                        draggable={drawingEnabled}
-                        onDragMove={(e) => handlePointDragMove(i, e)}
-                        onMouseEnter={(e) => {
-                          const container = e.target.getStage()?.container();
-                          if (container && drawingEnabled) {
-                            container.style.cursor = 'move';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          const container = e.target.getStage()?.container();
-                          if (container) {
-                            container.style.cursor = drawingEnabled ? 'crosshair' : 'default';
-                          }
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
-              </Layer>
-            </Stage>
-          )}
-        </div>
+                    className={drawingEnabled ? "cursor-crosshair border border-border rounded-lg" : "border border-border rounded-lg"}
+                    onClick={handleStageClick}
+                    onDblClick={handleDoubleClick}
+                  >
+                    <Layer>
+                      {image && (
+                        <KonvaImage
+                          image={image}
+                          width={dimensions.width}
+                          height={dimensions.height}
+                          name="background-image"
+                        />
+                      )}
+                      
+                      {/* Draw lines connecting points */}
+                      {points.length > 0 && (
+                        <Line
+                          points={points.flatMap(p => [p.x * dimensions.width, p.y * dimensions.height])}
+                          stroke={mode === 'polygon' ? '#3b82f6' : '#ef4444'}
+                          strokeWidth={2}
+                          closed={mode === 'polygon' && points.length >= 3}
+                          fill={mode === 'polygon' ? 'rgba(59, 130, 246, 0.2)' : undefined}
+                        />
+                      )}
+
+                      {/* Draw draggable points */}
+                      {points.map((point, i) => (
+                        <Circle
+                          key={i}
+                          x={point.x * dimensions.width}
+                          y={point.y * dimensions.height}
+                          radius={6}
+                          fill={selectedPointIndex === i ? '#ef4444' : '#3b82f6'}
+                          stroke="#fff"
+                          strokeWidth={2}
+                          draggable={drawingEnabled}
+                          onDragMove={(e) => handlePointDragMove(i, e)}
+                          onMouseEnter={(e) => {
+                            const container = e.target.getStage()?.container();
+                            if (container) container.style.cursor = 'pointer';
+                            setSelectedPointIndex(i);
+                          }}
+                          onMouseLeave={(e) => {
+                            const container = e.target.getStage()?.container();
+                            if (container) container.style.cursor = drawingEnabled ? 'crosshair' : 'default';
+                            setSelectedPointIndex(null);
+                          }}
+                        />
+                      ))}
+                    </Layer>
+                  </Stage>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Right Pane: Toolbar */}
-      <div className="w-64 space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-1">Drawing Tools</h3>
-          <p className="text-xs text-muted-foreground">
-            {mode === 'polygon'
-              ? 'Click to add points, double-click to close'
-              : 'Click start and end points'}
-          </p>
-        </div>
+      {/* Right: Toolbar */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Drawing Tools</CardTitle>
+            <CardDescription className="text-xs">
+              {mode === 'polygon' 
+                ? 'Click to add points. Double-click to close.' 
+                : 'Click start and end points.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-2">
+              {!drawingEnabled && (
+                <Button
+                  onClick={() => setDrawingEnabled(true)}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Start Drawing
+                </Button>
+              )}
+              <Button
+                onClick={handleUndo}
+                disabled={points.length === 0 || !drawingEnabled}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                <Undo className="mr-2 h-4 w-4" />
+                Undo
+              </Button>
+              <Button
+                onClick={handleClear}
+                disabled={points.length === 0 || !drawingEnabled}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
+              {mediaType === 'video' && (
+                <Button
+                  onClick={handleCaptureSnapshot}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  Snapshot
+                </Button>
+              )}
+            </div>
 
-        <Separator />
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Mode</Label>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
-            {mode === 'polygon' ? (
+            {capturedSnapshot && (
               <>
-                <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center">
-                  <ImageIcon className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Draw Polygon</p>
-                  <p className="text-xs text-muted-foreground">Crowd ROI</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center">
-                  <Pencil className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Draw Line</p>
-                  <p className="text-xs text-muted-foreground">Intrusion Line</p>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-xs">Active Snapshot</Label>
+                  <img
+                    src={capturedSnapshot}
+                    alt="Captured snapshot"
+                    className="w-full h-20 object-cover rounded border"
+                  />
                 </div>
               </>
             )}
-          </div>
-        </div>
 
-        <Separator />
+            <Separator />
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Actions</Label>
-          
-          {!drawingEnabled && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setDrawingEnabled(true)}
-              disabled={!image}
-              className="w-full"
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Start Drawing
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleUndo}
-            disabled={points.length === 0 || !drawingEnabled}
-            className="w-full"
-          >
-            <Undo className="h-4 w-4 mr-2" />
-            Undo
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleClear}
-            disabled={points.length === 0 || !drawingEnabled}
-            className="w-full"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear
-          </Button>
-
-          {mediaType === 'video' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCaptureSnapshot}
-              disabled={!image}
-              className="w-full"
-            >
-              <Camera className="h-4 w-4 mr-2" />
-              Snapshot
-            </Button>
-          )}
-        </div>
-
-        <Separator />
-
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Points: {points.length}</p>
-            <p>• Status: {drawingEnabled ? 'Drawing' : 'Viewing'}</p>
-            {capturedSnapshot && <p>• Snapshot: Captured ✓</p>}
-          </div>
-        </div>
-
-        <div className="pt-4 space-y-2">
-          <Button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="w-full"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Zone
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            className="w-full"
-          >
-            Cancel
-          </Button>
-        </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleSave}
+                disabled={
+                  (mode === 'polygon' && points.length < 3) ||
+                  (mode === 'line' && points.length !== 2) ||
+                  !drawingEnabled
+                }
+                className="w-full"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save Zone
+              </Button>
+              <Button onClick={onCancel} variant="outline" size="sm" className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Hidden canvas for video frame capture */}
+      <canvas ref={canvasSnapshotRef} style={{ display: 'none' }} />
     </div>
   );
 };

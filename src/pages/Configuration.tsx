@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Users, Shield, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Shield } from 'lucide-react';
 import { ZoneEditor } from '@/components/ZoneEditor';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -25,13 +25,11 @@ export default function Configuration() {
   const [configStep, setConfigStep] = useState(1);
   const [configType, setConfigType] = useState<ConfigType>('crowd_detection');
   const [editingConfig, setEditingConfig] = useState<Configuration | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [selectedCamera, setSelectedCamera] = useState('');
   const [selectedSite, setSelectedSite] = useState('');
   const [threshold, setThreshold] = useState('30');
-  const [uploadedPreview, setUploadedPreview] = useState<string>('');
 
   // Get all cameras from all sites
   const allCameras = sites.flatMap(site => 
@@ -52,7 +50,6 @@ export default function Configuration() {
     setSelectedCamera('');
     setSelectedSite('');
     setThreshold('30');
-    setUploadedPreview('');
   };
 
   const handleSiteChange = (siteId: string) => {
@@ -60,30 +57,6 @@ export default function Configuration() {
     setSelectedCamera(''); // Reset camera when site changes
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
-
-    if (file.size > maxSize) {
-      toast.error('File is too large. Maximum size is 50MB.');
-      return;
-    }
-
-    if (!validTypes.includes(file.type)) {
-      toast.error('Unsupported file format.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setUploadedPreview(event.target?.result as string);
-      toast.success('Media uploaded successfully');
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleNextStep = () => {
     if (selectedCamera && selectedSite && threshold) {
@@ -91,26 +64,24 @@ export default function Configuration() {
     }
   };
 
-  const getSelectedCameraImage = () => {
-    // Use uploaded preview first, then camera's uploaded media, then streamUrl, finally placeholder
-    if (uploadedPreview) return uploadedPreview;
-    
+  const getSelectedCameraMedia = () => {
     const camera = allCameras.find((c) => c.id === selectedCamera);
-    if (!camera) return '/placeholder.svg';
+    if (!camera) return null;
     
-    // Use first uploaded media if available
+    // Prefer camera's uploaded media, then streamUrl
     if (camera.uploadedMedia && camera.uploadedMedia.length > 0) {
       return camera.uploadedMedia[0];
     }
     
-    return camera.streamUrl || '/placeholder.svg';
+    return camera.streamUrl || null;
   };
 
-  const handleSaveZone = (zone: any) => {
+  const handleSaveZone = (zone: any, snapshotUrl?: string) => {
     const camera = allCameras.find((c) => c.id === selectedCamera);
     if (!camera) return;
 
-    const snapshotUrl = uploadedPreview || 
+    // Use provided snapshot or fall back to camera's media
+    const finalSnapshotUrl = snapshotUrl || 
       (camera.uploadedMedia && camera.uploadedMedia.length > 0 ? camera.uploadedMedia[0] : camera.streamUrl) || 
       '/placeholder.svg';
 
@@ -138,13 +109,13 @@ export default function Configuration() {
         count: configType === 'crowd_detection' ? parseInt(threshold) : undefined,
         severity: 'Medium',
         timestamp: new Date().toISOString(),
-        snapshotUrl: snapshotUrl,
+        snapshotUrl: finalSnapshotUrl,
       });
     }
 
     setIsAddDialogOpen(false);
     setConfigStep(1);
-    setUploadedPreview('');
+    toast.success('Zone saved successfully');
   };
 
   const handleAnnotate = (config: Configuration) => {
@@ -325,33 +296,16 @@ export default function Configuration() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-border bg-muted p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow" />
-                    <p className="text-sm font-medium">
-                      {allCameras.find((c) => c.id === selectedCamera)?.name} - {sites.find(s => s.id === selectedSite)?.name}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Media
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp,.mp4,.webm"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
+              <div className="rounded-lg border border-border bg-muted p-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-success animate-pulse-glow" />
+                  <p className="text-sm font-medium">
+                    {allCameras.find((c) => c.id === selectedCamera)?.name} - {sites.find(s => s.id === selectedSite)?.name}
+                  </p>
                 </div>
               </div>
               <ZoneEditor
-                imageUrl={getSelectedCameraImage()}
+                imageUrl={getSelectedCameraMedia()}
                 initialZone={editingConfig?.zone}
                 mode={configType === 'crowd_detection' ? 'polygon' : 'line'}
                 onSave={handleSaveZone}
@@ -359,8 +313,8 @@ export default function Configuration() {
                   setIsAddDialogOpen(false);
                   setConfigStep(1);
                   setEditingConfig(null);
-                  setUploadedPreview('');
                 }}
+                cameraName={allCameras.find((c) => c.id === selectedCamera)?.name}
               />
             </div>
           )}
