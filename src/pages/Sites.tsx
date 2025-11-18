@@ -13,10 +13,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { toast } from 'sonner';
 
 export default function Sites() {
-  const { sites, addSite, updateSite, deleteSite, addCamera, deleteCamera } = useSiteStore();
+  const { sites, addSite, updateSite, deleteSite, addCamera, updateCamera, deleteCamera } = useSiteStore();
   const [isSiteDialogOpen, setIsSiteDialogOpen] = useState(false);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
+  const [editingCamera, setEditingCamera] = useState<SiteCamera | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [expandedSites, setExpandedSites] = useState<string[]>([]);
 
@@ -82,13 +83,23 @@ export default function Sites() {
     toast.success('Site deleted');
   };
 
-  const handleOpenCameraDialog = (siteId: string) => {
+  const handleOpenCameraDialog = (siteId: string, camera?: SiteCamera) => {
     setSelectedSiteId(siteId);
-    setCameraName('');
-    setCameraId('');
-    setStreamUrl('');
-    setCameraActive(true);
-    setUploadedFiles([]);
+    if (camera) {
+      setEditingCamera(camera);
+      setCameraName(camera.name);
+      setCameraId(camera.cameraId);
+      setStreamUrl(camera.streamUrl);
+      setCameraActive(camera.active);
+      setUploadedFiles(camera.uploadedMedia || []);
+    } else {
+      setEditingCamera(null);
+      setCameraName('');
+      setCameraId('');
+      setStreamUrl('');
+      setCameraActive(true);
+      setUploadedFiles([]);
+    }
     setIsCameraDialogOpen(true);
   };
 
@@ -131,16 +142,28 @@ export default function Sites() {
       return;
     }
 
-    addCamera(selectedSiteId, {
-      name: cameraName,
-      cameraId: cameraId,
-      streamUrl: streamUrl || (uploadedFiles.length > 0 ? uploadedFiles[0] : '/placeholder.svg'),
-      uploadedMedia: uploadedFiles.length > 0 ? uploadedFiles : undefined,
-      active: cameraActive,
-    });
+    if (editingCamera) {
+      updateCamera(selectedSiteId, editingCamera.id, {
+        name: cameraName,
+        cameraId: cameraId,
+        streamUrl: streamUrl || (uploadedFiles.length > 0 ? uploadedFiles[0] : '/placeholder.svg'),
+        uploadedMedia: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+        active: cameraActive,
+      });
+      toast.success('Camera updated successfully');
+    } else {
+      addCamera(selectedSiteId, {
+        name: cameraName,
+        cameraId: cameraId,
+        streamUrl: streamUrl || (uploadedFiles.length > 0 ? uploadedFiles[0] : '/placeholder.svg'),
+        uploadedMedia: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+        active: cameraActive,
+      });
+      toast.success('Camera added successfully');
+    }
 
-    toast.success('Camera added successfully');
     setIsCameraDialogOpen(false);
+    setEditingCamera(null);
   };
 
   const handleDeleteCamera = (siteId: string, cameraId: string) => {
@@ -295,15 +318,26 @@ export default function Sites() {
                                     {camera.active ? 'Active' : 'Inactive'}
                                   </Badge>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteCamera(site.id, camera.id)}
-                                >
-                                  <Trash2 className="mr-2 h-3 w-3" />
-                                  Remove
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleOpenCameraDialog(site.id, camera)}
+                                  >
+                                    <Pencil className="mr-2 h-3 w-3" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 text-destructive hover:text-destructive"
+                                    onClick={() => handleDeleteCamera(site.id, camera.id)}
+                                  >
+                                    <Trash2 className="mr-2 h-3 w-3" />
+                                    Remove
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -384,7 +418,7 @@ export default function Sites() {
       <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Camera</DialogTitle>
+            <DialogTitle>{editingCamera ? 'Edit Camera' : 'Add Camera'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -483,7 +517,9 @@ export default function Sites() {
               <Button variant="outline" onClick={() => setIsCameraDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveCamera}>Add Camera</Button>
+              <Button onClick={handleSaveCamera}>
+                {editingCamera ? 'Save Changes' : 'Add Camera'}
+              </Button>
             </div>
           </div>
         </DialogContent>
