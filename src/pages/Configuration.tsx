@@ -30,6 +30,7 @@ export default function Configuration() {
   const [selectedCamera, setSelectedCamera] = useState('');
   const [selectedSite, setSelectedSite] = useState('');
   const [threshold, setThreshold] = useState('30');
+  const [direction, setDirection] = useState<string>('');
 
   // Get all cameras from all sites
   const allCameras = sites.flatMap(site => 
@@ -50,6 +51,8 @@ export default function Configuration() {
     setSelectedCamera('');
     setSelectedSite('');
     setThreshold('30');
+    setDirection('');
+    setEditingConfig(null);
   };
 
   const handleSiteChange = (siteId: string) => {
@@ -59,8 +62,14 @@ export default function Configuration() {
 
 
   const handleNextStep = () => {
-    if (selectedCamera && selectedSite && threshold) {
-      setConfigStep(2);
+    if (configType === 'intrusion_detection') {
+      if (selectedCamera && selectedSite) {
+        setConfigStep(2);
+      }
+    } else {
+      if (selectedCamera && selectedSite && threshold) {
+        setConfigStep(2);
+      }
     }
   };
 
@@ -76,7 +85,7 @@ export default function Configuration() {
     return camera.streamUrl || null;
   };
 
-  const handleSaveZone = (zone: any, snapshotUrl?: string) => {
+  const handleSaveZone = (zone: any, snapshotUrl?: string, zoneDirection?: string) => {
     const camera = allCameras.find((c) => c.id === selectedCamera);
     if (!camera) return;
 
@@ -86,10 +95,14 @@ export default function Configuration() {
       '/placeholder.svg';
 
     if (editingConfig) {
-      updateConfiguration(editingConfig.id, zone);
+      updateConfiguration(
+        editingConfig.id, 
+        zone, 
+        zoneDirection as 'top-bottom' | 'bottom-top' | 'left-right' | 'right-left' | undefined
+      );
       setEditingConfig(null);
     } else {
-      const newConfig = {
+      const newConfig: any = {
         type: configType,
         cameraId: selectedCamera,
         cameraName: camera.name,
@@ -97,6 +110,9 @@ export default function Configuration() {
         threshold: parseInt(threshold),
         zone,
       };
+      if (configType === 'intrusion_detection' && zoneDirection) {
+        newConfig.direction = zoneDirection;
+      }
       addConfiguration(newConfig);
 
       // Auto-generate alert for the new configuration
@@ -124,7 +140,8 @@ export default function Configuration() {
     setSelectedCamera(config.cameraId);
     setSelectedSite(config.site);
     setThreshold(config.threshold.toString());
-    setConfigStep(2);
+    setDirection(config.direction || '');
+    setConfigStep(1);
     setIsAddDialogOpen(true);
   };
 
@@ -272,24 +289,31 @@ export default function Configuration() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="threshold">
-                  Threshold {configType === 'crowd_detection' ? '(People Count)' : '(Sensitivity)'}
-                </Label>
-                <Input
-                  id="threshold"
-                  type="number"
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                  placeholder="Enter threshold value"
-                />
-              </div>
+              {configType === 'crowd_detection' && (
+                <div className="space-y-2">
+                  <Label htmlFor="threshold">Threshold (People Count)</Label>
+                  <Input
+                    id="threshold"
+                    type="number"
+                    value={threshold}
+                    onChange={(e) => setThreshold(e.target.value)}
+                    placeholder="Enter threshold value"
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleNextStep} disabled={!selectedCamera || !selectedSite || !threshold}>
+                <Button 
+                  onClick={handleNextStep} 
+                  disabled={
+                    !selectedCamera || 
+                    !selectedSite || 
+                    (configType === 'crowd_detection' && !threshold)
+                  }
+                >
                   Next: Draw Zone
                 </Button>
               </div>
@@ -307,6 +331,7 @@ export default function Configuration() {
               <ZoneEditor
                 imageUrl={getSelectedCameraMedia()}
                 initialZone={editingConfig?.zone}
+                initialDirection={editingConfig?.direction}
                 mode={configType === 'crowd_detection' ? 'polygon' : 'line'}
                 onSave={handleSaveZone}
                 onCancel={() => {
