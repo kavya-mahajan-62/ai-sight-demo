@@ -14,13 +14,14 @@ export interface Configuration {
   site: string;
   threshold: number;
   zone: ZonePoint[];
+  direction?: 'top-bottom' | 'bottom-top' | 'left-right' | 'right-left';
   createdAt: string;
 }
 
 interface ConfigState {
   configurations: Configuration[];
   addConfiguration: (config: Omit<Configuration, 'id' | 'createdAt'>) => void;
-  updateConfiguration: (id: string, zone: ZonePoint[]) => void;
+  updateConfiguration: (id: string, zone: ZonePoint[], direction?: 'top-bottom' | 'bottom-top' | 'left-right' | 'right-left') => void;
   deleteConfiguration: (id: string) => void;
 }
 
@@ -36,10 +37,10 @@ export const useConfigStore = create<ConfigState>()(
         };
         set((state) => ({ configurations: [...state.configurations, newConfig] }));
       },
-      updateConfiguration: (id, zone) => {
+      updateConfiguration: (id, zone, direction) => {
         set((state) => ({
           configurations: state.configurations.map((config) =>
-            config.id === id ? { ...config, zone } : config
+            config.id === id ? { ...config, zone, ...(direction && { direction }) } : config
           ),
         }));
       },

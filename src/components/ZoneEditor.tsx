@@ -3,6 +3,7 @@ import { Stage, Layer, Line, Circle, Image as KonvaImage } from 'react-konva';
 import { Button } from './ui/button';
 import { Undo, Save, Trash2, Pencil, Camera, Play, Pause } from 'lucide-react';
 import { ZonePoint } from '@/stores/configStore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import Konva from 'konva';
 import { toast } from 'sonner';
 import { Label } from './ui/label';
@@ -12,13 +13,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 interface ZoneEditorProps {
   imageUrl: string | null;
   initialZone?: ZonePoint[];
+  initialDirection?: string;
   mode: 'polygon' | 'line';
-  onSave: (zone: ZonePoint[], snapshotUrl?: string) => void;
+  onSave: (zone: ZonePoint[], snapshotUrl?: string, direction?: string) => void;
   onCancel: () => void;
   cameraName?: string;
 }
 
-export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel, cameraName }: ZoneEditorProps) => {
+export const ZoneEditor = ({ imageUrl, initialZone = [], initialDirection, mode, onSave, onCancel, cameraName }: ZoneEditorProps) => {
   const [points, setPoints] = useState<ZonePoint[]>(initialZone);
   const [isDrawing, setIsDrawing] = useState(false);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -31,6 +33,7 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
   const [videoDuration, setVideoDuration] = useState(0);
   const [capturedSnapshot, setCapturedSnapshot] = useState<string | null>(null);
   const [hasMedia, setHasMedia] = useState(false);
+  const [direction, setDirection] = useState<string>(initialDirection || '');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -247,7 +250,11 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
       toast.error('Line must have exactly 2 points');
       return;
     }
-    onSave(points, capturedSnapshot || undefined);
+    if (mode === 'line' && !direction) {
+      toast.error('Please select a direction for intrusion detection');
+      return;
+    }
+    onSave(points, capturedSnapshot || undefined, mode === 'line' ? direction : undefined);
   };
 
   const formatTime = (seconds: number) => {
@@ -463,6 +470,26 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
               </>
             )}
 
+            {mode === 'line' && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Direction (Required)</Label>
+                  <Select value={direction} onValueChange={setDirection}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select direction" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top-bottom">Top → Bottom</SelectItem>
+                      <SelectItem value="bottom-top">Bottom → Top</SelectItem>
+                      <SelectItem value="left-right">Left → Right</SelectItem>
+                      <SelectItem value="right-left">Right → Left</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
             <Separator />
 
             <div className="flex flex-col gap-2">
@@ -471,6 +498,7 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
                 disabled={
                   (mode === 'polygon' && points.length < 3) ||
                   (mode === 'line' && points.length !== 2) ||
+                  (mode === 'line' && !direction) ||
                   !drawingEnabled
                 }
                 className="w-full"
