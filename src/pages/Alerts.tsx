@@ -17,6 +17,8 @@ export default function Alerts() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [cameraFilter, setCameraFilter] = useState('all');
   const [selectedAlert, setSelectedAlert] = useState<AlertType | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const cameras = getActiveCameras();
 
@@ -31,6 +33,12 @@ export default function Alerts() {
 
     return matchesSearch && matchesType && matchesCamera && !alert.acknowledged;
   });
+
+  const totalPages = Math.ceil(filteredAlerts.length / itemsPerPage);
+  const paginatedAlerts = filteredAlerts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -112,14 +120,14 @@ export default function Alerts() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAlerts.length === 0 ? (
+                {paginatedAlerts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
                       No active alerts
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAlerts.map((alert) => {
+                  paginatedAlerts.map((alert) => {
                     const TypeIcon = getTypeIcon(alert.type);
                     return (
                       <TableRow key={alert.id}>
@@ -159,6 +167,34 @@ export default function Alerts() {
               </TableBody>
             </Table>
           </div>
+          
+          {filteredAlerts.length > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                {Math.min(currentPage * itemsPerPage, filteredAlerts.length)} of{' '}
+                {filteredAlerts.length} alerts
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

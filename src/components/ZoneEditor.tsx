@@ -256,55 +256,44 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const renderMedia = () => {
-    if (!imageUrl) {
-      return (
-        <div className="flex flex-col items-center justify-center h-[450px] bg-muted rounded-lg border-2 border-dashed border-border">
-          <p className="text-sm text-muted-foreground mb-2">No media available</p>
-          <p className="text-xs text-muted-foreground">Add media via Site Management</p>
-        </div>
-      );
-    }
+  const renderVideoControls = () => {
+    if (mediaType !== 'video' || !imageUrl) return null;
 
-    if (mediaType === 'video') {
-      return (
-        <div className="space-y-2">
-          <video
-            ref={videoRef}
-            src={imageUrl}
-            className="w-full h-auto rounded-lg"
-            onLoadedMetadata={handleVideoLoadedMetadata}
-            onTimeUpdate={handleVideoTimeUpdate}
-          />
-          <div className="space-y-2 p-2 bg-muted rounded">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePlayPause}
-              >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <div className="flex-1">
-                <input
-                  type="range"
-                  min="0"
-                  max={videoDuration}
-                  value={videoCurrentTime}
-                  onChange={handleVideoSeek}
-                  className="w-full"
-                />
-              </div>
-              <span className="text-xs text-muted-foreground min-w-[80px]">
-                {formatTime(videoCurrentTime)} / {formatTime(videoDuration)}
-              </span>
+    return (
+      <div className="space-y-2 mb-4">
+        <video
+          ref={videoRef}
+          src={imageUrl}
+          className="hidden"
+          onLoadedMetadata={handleVideoLoadedMetadata}
+          onTimeUpdate={handleVideoTimeUpdate}
+        />
+        <div className="space-y-2 p-2 bg-muted rounded">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePlayPause}
+            >
+              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
+            <div className="flex-1">
+              <input
+                type="range"
+                min="0"
+                max={videoDuration}
+                value={videoCurrentTime}
+                onChange={handleVideoSeek}
+                className="w-full"
+              />
             </div>
+            <span className="text-xs text-muted-foreground min-w-[80px]">
+              {formatTime(videoCurrentTime)} / {formatTime(videoDuration)}
+            </span>
           </div>
         </div>
-      );
-    }
-
-    return null;
+      </div>
+    );
   };
 
   return (
@@ -337,10 +326,14 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
           </CardHeader>
           <CardContent>
             <div className="relative">
-              {renderMedia()}
-              {(image || mediaType === 'video') && (
-                <div className="mt-4">
-                  <Stage
+              {renderVideoControls()}
+              {!imageUrl ? (
+                <div className="flex flex-col items-center justify-center h-[450px] bg-muted rounded-lg border-2 border-dashed border-border">
+                  <p className="text-sm text-muted-foreground mb-2">No media available</p>
+                  <p className="text-xs text-muted-foreground">Add media via Site Management</p>
+                </div>
+              ) : (
+                <Stage
                     width={dimensions.width}
                     height={dimensions.height}
                     className={drawingEnabled ? "cursor-crosshair border border-border rounded-lg" : "border border-border rounded-lg"}
@@ -394,7 +387,6 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], mode, onSave, onCancel,
                       ))}
                     </Layer>
                   </Stage>
-                </div>
               )}
             </div>
           </CardContent>
