@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Switch } from './ui/switch';
+import { Badge } from './ui/badge';
 
 interface ZoneEditorProps {
   imageUrl: string | null;
@@ -34,6 +36,8 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], initialDirection, mode,
   const [capturedSnapshot, setCapturedSnapshot] = useState<string | null>(null);
   const [hasMedia, setHasMedia] = useState(false);
   const [direction, setDirection] = useState<string>(initialDirection || '');
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectionCount, setDetectionCount] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -257,6 +261,21 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], initialDirection, mode,
     onSave(points, capturedSnapshot || undefined, mode === 'line' ? direction : undefined);
   };
 
+  const handleToggleDetection = () => {
+    setIsDetecting(!isDetecting);
+    if (!isDetecting) {
+      toast.success('Detection started');
+      // Simulate detection count updates
+      const interval = setInterval(() => {
+        setDetectionCount((prev) => prev + Math.floor(Math.random() * 3));
+      }, 2000);
+      return () => clearInterval(interval);
+    } else {
+      toast.info('Detection stopped');
+      setDetectionCount(0);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -404,14 +423,48 @@ export const ZoneEditor = ({ imageUrl, initialZone = [], initialDirection, mode,
       <div className="space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Drawing Tools</CardTitle>
-            <CardDescription className="text-xs">
-              {mode === 'polygon' 
-                ? 'Click to add points. Double-click to close.' 
-                : 'Click start and end points.'}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Drawing Tools</CardTitle>
+                <CardDescription className="text-xs">
+                  {mode === 'polygon' 
+                    ? 'Click to add points. Double-click to close.' 
+                    : 'Click start and end points.'}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {isDetecting ? (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-xs text-green-500">Detecting</span>
+                      {detectionCount > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {detectionCount}
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="text-xs text-muted-foreground">Stopped</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
+              <Label htmlFor="detection-toggle" className="text-sm cursor-pointer">
+                {isDetecting ? 'Stop Detection' : 'Start Detection'}
+              </Label>
+              <Switch
+                id="detection-toggle"
+                checked={isDetecting}
+                onCheckedChange={handleToggleDetection}
+              />
+            </div>
             <div className="flex flex-col gap-2">
               {!drawingEnabled && (
                 <Button
