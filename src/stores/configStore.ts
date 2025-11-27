@@ -53,6 +53,9 @@ export const useConfigStore = create<ConfigState>()(
     {
       name: 'surveillance-config',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        configurations: state.configurations,
+      }),
     }
   )
 );

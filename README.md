@@ -1,42 +1,81 @@
-# Smart Surveillance AI - Frontend Demo
+# Surveillance AI Platform
 
-A complete frontend-only surveillance monitoring system with AI-powered crowd detection and intrusion alerts. Built with React, TypeScript, and modern web technologies.
+A modern surveillance management system with AI-powered crowd and intrusion detection, ready for backend integration.
 
 ## 🚀 Features
 
-### Core Capabilities
-- **Role-Based Access Control (RBAC)**: Three user roles with different permissions
-  - **Admin**: Full system access
-  - **Security**: Limited operational access
-  - **Viewer**: Read-only access
+- 🎯 **Crowd Detection** - Monitor crowd density and people count in real-time
+- 🛡️ **Intrusion Detection** - Detect unauthorized access and boundary violations
+- 📊 **Analytics Dashboard** - View trends and insights from detection data
+- 🚨 **Real-time Alerts** - Get instant notifications for security events
+- 🎨 **Zone Configuration** - Draw custom detection zones with visual editor
+- 🏢 **Multi-site Management** - Manage cameras across multiple locations
+- 🔐 **Authentication** - Role-based access control (Admin, Security, Viewer)
 
-- **Crowd Detection Service**: Monitor people count and density in real-time with polygon zone drawing
-- **Intrusion Detection Service**: Detect boundary violations with line-based zone configuration
-- **Real-Time Alerts**: Live WebSocket simulation for instant notifications
-- **Analytics Dashboard**: Interactive charts and KPI tracking
-- **Zone Editor**: Draw and manage detection zones with react-konva
-- **Media Upload & Simulation**: Upload photos/videos, annotate zones, and simulate detections
+## 🛠️ Tech Stack
 
-### Technical Stack
-- **Framework**: React 18 + TypeScript + Vite
-- **Styling**: TailwindCSS + shadcn/ui
-- **State Management**: Zustand with persistence
+- **Frontend**: React 18, TypeScript, Vite
+- **UI**: Tailwind CSS, shadcn/ui, Framer Motion
+- **State**: Zustand with persistence
+- **API**: Centralized REST client with auto-retry & auth
+- **WebSocket**: Production-ready client with auto-reconnect
+- **Canvas**: Konva for zone drawing
 - **Charts**: Recharts
-- **Zone Drawing**: react-konva + Konva
-- **Animations**: Framer Motion
-- **API Mocking**: MSW (Mock Service Worker)
 
 ## 📦 Installation
+
+### Prerequisites
+
+- Node.js 18+ or Bun
+- Backend API server (optional for development)
+
+### Setup
 
 ```bash
 # Install dependencies
 npm install
+# or
+bun install
 
-# Start development server
+# Copy environment template
+cp .env.example .env
+
+# Configure your environment (see Environment Setup below)
+```
+
+### Environment Setup
+
+Configure `.env` with your backend URLs:
+
+```env
+# API Configuration
+VITE_API_BASE_URL=http://localhost:3000
+VITE_WS_BASE_URL=ws://localhost:3000
+
+# Environment
+VITE_ENV=development
+```
+
+### Development
+
+```bash
+# Start development server (with proxy)
 npm run dev
+# or
+bun run dev
+```
 
+The app will be available at `http://localhost:8080`
+
+**Dev Proxy**: API requests to `/api` and WebSocket connections to `/ws` are automatically proxied to your backend (no CORS issues).
+
+### Build
+
+```bash
 # Build for production
 npm run build
+# or
+bun run build
 
 # Preview production build
 npm run preview
@@ -44,7 +83,7 @@ npm run preview
 
 ## 🔐 Demo Accounts
 
-Use these credentials to test different user roles:
+Use these credentials (mock mode):
 
 | Role     | Email                      | Password |
 |----------|---------------------------|----------|
@@ -52,266 +91,220 @@ Use these credentials to test different user roles:
 | Security | security@surveillance.ai  | demo123  |
 | Viewer   | viewer@surveillance.ai    | demo123  |
 
-## 🎯 Key Features Implementation
-
-### 1. Authentication
-- Mock authentication with localStorage token storage
-- Automatic route protection
-- Role-based UI permissions
-
-### 2. Dashboard
-- Service status cards (Crowd Detection, Intrusion Detection)
-- Quick stats overview
-- Navigation to service-specific analytics
-
-### 3. Analytics
-- **KPI Cards**:
-  - Total People Detected
-  - Intrusion Alerts
-- **Charts**:
-  - Line chart: People Count Trend (24-hour)
-  - Bar chart: Intrusion Frequency (7-day)
-- Time range filters (Today, Last 7 Days, Custom)
-
-### 4. Alerts & Events
-- Real-time alert table with filtering
-- Search by Event ID, Camera, or Zone
-- Filter by Type (Crowd/Intrusion) and Camera
-- Alert detail modal with snapshot
-- Acknowledge functionality
-- Live toast notifications for new alerts
-
-### 5. Configuration
-- Tab-based interface (Crowd Detection | Intrusion Detection)
-- Two-step configuration wizard:
-  - **Step 1**: Select Camera, Site, and Threshold
-  - **Step 2**: Draw Zone with interactive editor
-- Zone management (Edit, Delete)
-- Site options: Pantry Area, Office Area, Reception Area, Entry Area
-- Active cameras only
-
-### 6. Zone Editor (Enhanced)
-- **Two-Pane Layout**:
-  - Left: Camera preview area with media upload and live feed toggle
-  - Right: Drawing toolbar with all controls organized vertically
-- **Media Upload**:
-  - Upload images (.jpg, .png, .jpeg, .webp) or videos (.mp4)
-  - File size validation (< 50MB)
-  - Instant preview after upload
-- **Video Support**:
-  - Play/pause controls
-  - Timeline scrubber to select frame for drawing
-  - Current time display
-  - Snapshot capture from current frame
-- **Drawing Tools**:
-  - **Crowd Detection**: Polygon drawing
-    - Click to add points
-    - Double-click to close polygon
-    - Drag vertex handles to adjust points
-  - **Intrusion Detection**: Line drawing
-    - Click start and end points
-    - Drag endpoints to adjust line
-  - Visual feedback with cyan highlighting
-- **Advanced Features**:
-  - Draggable vertex handles for editing zones
-  - Live feed toggle (placeholder mode)
-  - Snapshot capture for video frames
-  - Edit, undo, and clear functionality
-  - Normalized coordinates (0-1 range) for responsive scaling
-- **UI/UX**:
-  - Status display (points count, drawing state)
-  - Mode indicator (Polygon or Line)
-  - Disabled states for unavailable actions
-
-### 7. Upload & Simulate
-- Upload images (JPG, PNG) and videos (MP4, WEBM)
-- Thumbnail grid view
-- **Annotate**: Draw zones on uploaded media
-- **Simulate**: Generate mock detection events
-- Delete uploaded files
-
-### 8. Settings
-- **Profile**: Update name and view account info
-- **Password**: Change password form
-- **Appearance**: Dark/Light mode toggle
-
-## 🌐 Mock Data & Real-Time Behavior
-
-### WebSocket Simulation
-The app includes a mock WebSocket that emits events every 10-30 seconds:
-
-- **people_detection**: Crowd count events with snapshot
-- **intrusion_alert**: Boundary violation events with severity
-
-Events automatically populate the alerts table and trigger toast notifications.
-
-### Mock Cameras
-- 4 active cameras across different locations
-- 1 inactive camera (filtered out in dropdowns)
-
-### Sites
-Fixed locations:
-- Pantry Area
-- Office Area
-- Reception Area
-- Entry Area
-
-## 🎨 Design System
-
-### Color Palette
-- **Primary**: Deep Cyan (HSL: 195, 92%, 48%)
-- **Secondary**: Slate Gray
-- **Accent**: Teal
-- **Success**: Green (142, 71%, 45%)
-- **Warning**: Amber (38, 92%, 50%)
-- **Destructive**: Red (0, 72%, 51%)
-
-### Theme
-- **Dark Mode** as default
-- Professional surveillance aesthetic
-- Smooth animations and transitions
-- Responsive design (mobile, tablet, desktop)
-
-### Components
-All UI components use shadcn/ui with custom variants and semantic tokens from the design system.
-
 ## 📁 Project Structure
 
 ```
 src/
-├── components/
-│   ├── ui/              # shadcn/ui components
-│   ├── Header.tsx       # Top navigation bar
-│   ├── Layout.tsx       # Main layout wrapper
-│   ├── Sidebar.tsx      # Navigation sidebar
-│   └── ZoneEditor.tsx   # Zone drawing component
-├── pages/
-│   ├── Login.tsx        # Authentication page
-│   ├── Dashboard.tsx    # Main dashboard
-│   ├── Analytics.tsx    # Charts and KPIs
-│   ├── Alerts.tsx       # Events table
-│   ├── Configuration.tsx # Zone management
-│   ├── Upload.tsx       # Media upload
-│   └── Settings.tsx     # User settings
-├── stores/
-│   ├── authStore.ts     # Authentication state
-│   ├── alertStore.ts    # Alerts state
-│   └── configStore.ts   # Configurations state
-├── lib/
-│   ├── mockData.ts      # Mock cameras, sites, data
-│   ├── websocket.ts     # WebSocket simulation
-│   └── utils.ts         # Helper functions
-└── App.tsx              # Main app component
+├── components/        # React components
+│   ├── ui/           # shadcn/ui components
+│   ├── Layout.tsx    # Main layout with auth
+│   ├── Header.tsx    # Top navigation
+│   ├── Sidebar.tsx   # Side navigation
+│   └── ZoneEditor.tsx # Canvas-based zone drawing
+├── pages/            # Route pages (lazy-loaded)
+│   ├── Dashboard.tsx
+│   ├── Analytics.tsx
+│   ├── Alerts.tsx
+│   ├── Configuration.tsx
+│   ├── Sites.tsx
+│   └── Settings.tsx
+├── stores/           # Zustand state management
+│   ├── authStore.ts  # Authentication + token
+│   ├── alertStore.ts # Real-time alerts
+│   ├── configStore.ts # Detection zones
+│   └── siteStore.ts  # Sites & cameras
+├── services/         # Backend integration
+│   ├── api.ts        # REST API client
+│   └── websocket.ts  # WebSocket client
+├── types/            # TypeScript definitions
+│   ├── entities.ts   # Core data types
+│   └── index.ts
+├── hooks/            # Custom React hooks
+│   ├── useErrorHandler.ts
+│   └── use-mobile.tsx
+├── lib/              # Utilities
+│   ├── utils.ts
+│   └── mockData.ts
+└── App.tsx          # Root component
 ```
 
-## 🧪 Testing
+## 🔌 Backend Integration
 
-```bash
-# Run tests
-npm run test
+The frontend is **production-ready** for backend integration.
 
-# Run tests with coverage
-npm run test:coverage
+### API Client (`src/services/api.ts`)
+
+Centralized REST API client with:
+- ✅ Automatic auth token injection from localStorage
+- ✅ 401 handling (auto-logout + redirect)
+- ✅ Proper error parsing & propagation
+- ✅ Type-safe requests with TypeScript generics
+- ✅ `Content-Type: application/json` headers
+
+**Usage**:
+```typescript
+import { api } from '@/services/api';
+
+// GET request
+const sites = await api.get<Site[]>('/sites');
+
+// POST request
+const newSite = await api.post<Site>('/sites', { name: 'HQ', address: '123 Main' });
+
+// PUT, PATCH, DELETE also available
 ```
 
-### Test Coverage
-- ZoneEditor: Draw, save, and edit polygon/line zones with draggable handles
-- ZoneEditor: Media upload (images and videos) with validation
-- ZoneEditor: Video playback controls and frame scrubbing
-- ZoneEditor: Snapshot capture functionality
-- Upload: Media upload and simulation triggers
-- Storybook stories for ZoneEditor component
+### WebSocket Client (`src/services/websocket.ts`)
 
-### Testing Drawing & Upload Locally
+Production-ready WebSocket with:
+- ✅ Auto-reconnect with exponential backoff
+- ✅ Max retry attempts (configurable)
+- ✅ Proper cleanup on unmount
+- ✅ Message handler subscription system
+- ✅ Connection state tracking
 
-1. **Test Image Upload**:
-   - Navigate to Configuration → Add Configuration
-   - Fill in Camera, Site, and Threshold
-   - Click "Next: Draw Zone"
-   - Click "Upload Image/Video" and select a .jpg or .png file
-   - Verify the image appears in the preview area
-   - Click "Start Drawing" and add points by clicking on the image
-   - Drag the vertex handles to adjust points
-   - Click "Save Zone"
+**Usage**:
+```typescript
+import { getWebSocketInstance } from '@/services/websocket';
 
-2. **Test Video Upload**:
-   - Follow the same steps as image upload but select a .mp4 file
-   - Use play/pause controls to navigate the video
-   - Drag the timeline scrubber to select a specific frame
-   - Click "Snapshot" to capture the current frame
-   - Draw zones on the captured frame
-   - Click "Save Zone"
+const ws = getWebSocketInstance({ 
+  reconnect: true,
+  maxReconnectAttempts: 10 
+});
 
-3. **Test Live Feed Toggle**:
-   - Enable the "Live Feed" toggle
-   - Verify the live feed placeholder appears
-   - Draw zones on the placeholder
-   - Click "Save Zone"
+ws.onMessage((message) => {
+  console.log('Received:', message);
+});
 
-4. **Test Draggable Handles**:
-   - After drawing a polygon or line, hover over the vertex points
-   - Cursor should change to a "move" cursor
-   - Click and drag the points to adjust the zone shape
-   - Verify the zone updates in real-time
-
-5. **Verify Alert Generation**:
-   - After saving a zone, navigate to the Alerts page
-   - Verify a new alert appears with the zone name, camera, and type
-   - Check that the snapshot (if captured) is included in the alert details
-
-## 📚 Storybook
-
-```bash
-# Run Storybook
-npm run storybook
+ws.connect();
 ```
 
-View component stories including ZoneEditor with draw, edit, and save states.
+### Expected Backend Endpoints
 
-## 🔧 Development Notes
+#### Authentication
+- `POST /auth/login` - User login
+  - Body: `{ email: string, password: string }`
+  - Returns: `{ user: User, token: string }`
 
-### Mock Implementation
-All backend functionality is mocked:
-- Authentication uses localStorage
-- Alerts are generated via WebSocket simulation
-- Configurations stored in Zustand with localStorage persistence
-- No real API calls or server required
+#### Sites
+- `GET /sites` - List all sites
+- `POST /sites` - Create site
+- `PUT /sites/:id` - Update site
+- `DELETE /sites/:id` - Delete site
 
-### Zone Coordinates
-Zones are stored as normalized coordinates (0-1 range) for responsive scaling across different screen sizes.
+#### Cameras
+- `GET /sites/:siteId/cameras` - List cameras
+- `POST /sites/:siteId/cameras` - Add camera
+- `PUT /cameras/:id` - Update camera
+- `DELETE /cameras/:id` - Delete camera
 
-### Real-Time Updates
-WebSocket mock automatically emits events while authenticated. Listen for:
-- `people_detection` events
-- `intrusion_alert` events
+#### Configurations
+- `GET /configurations` - List detection zones
+- `POST /configurations` - Create zone
+- `PUT /configurations/:id` - Update zone
+- `DELETE /configurations/:id` - Delete zone
 
-## 🚀 Deployment
+#### Alerts
+- `GET /alerts` - List alerts (paginated)
+- `PATCH /alerts/:id/acknowledge` - Acknowledge alert
 
-```bash
-# Build production bundle
-npm run build
+### WebSocket Events
 
-# Preview production build
-npm run preview
+The frontend expects these WebSocket message types:
+
+```typescript
+// Alert event
+{
+  type: 'alert',
+  data: {
+    type: 'crowd_detection' | 'intrusion_alert',
+    cameraId: string,
+    cameraName: string,
+    zoneId: string,
+    zoneName: string,
+    count?: number,
+    severity: 'Low' | 'Medium' | 'High' | 'Critical',
+    timestamp: string,
+    snapshotUrl: string
+  }
+}
 ```
 
-The `dist/` folder contains the production-ready application.
+## 🔒 State Management
+
+All Zustand stores use **persistence middleware** with proper serialization:
+
+- ✅ Only serializable data is persisted
+- ✅ Functions excluded from localStorage
+- ✅ `partialize` used to whitelist keys
+- ✅ Initial state clearly defined
+
+**Stores**:
+- `authStore` - User, token, auth state
+- `alertStore` - Real-time alerts (in-memory only)
+- `configStore` - Detection zone configurations
+- `siteStore` - Sites & cameras
+
+## ⚡ Performance Optimizations
+
+- **Lazy Loading**: Heavy components (Analytics, Configuration, Sites) load on-demand
+- **Code Splitting**: Route-based chunks for faster initial load
+- **Query Caching**: React Query with 5-minute stale time
+- **Image Optimization**: Lazy loading images in cards/tables
+- **Suspense Boundaries**: Loading states for async routes
+
+## 🛡️ Error Handling
+
+- **Global Error Handler**: Catches unhandled promise rejections
+- **API Error Boundary**: Displays user-friendly error messages
+- **401 Auto-logout**: Expired tokens trigger automatic redirect
+- **Toast Notifications**: Visual feedback for all errors
+- **Network Retry**: Query client retries failed requests once
+
+## 🧪 Development vs Production
+
+| Feature | Development | Production |
+|---------|------------|-----------|
+| WebSocket | Disabled (logs only) | Enabled with backend URL |
+| API Calls | Proxied via Vite | Direct to `VITE_API_BASE_URL` |
+| Mock Data | Used for initial state | Replaced by API data |
+| Error Logging | Full console output | User-friendly messages |
+
+## 🚀 Deployment Checklist
+
+Before deploying to production:
+
+1. ✅ Set `VITE_API_BASE_URL` to production API
+2. ✅ Set `VITE_WS_BASE_URL` to production WebSocket
+3. ✅ Set `VITE_ENV=production`
+4. ✅ Remove or disable mock data
+5. ✅ Test authentication flow end-to-end
+6. ✅ Verify WebSocket reconnection
+7. ✅ Check error handling for all API failures
+8. ✅ Run `npm run build` and check for warnings
+
+## 🧰 Development Features
+
+- 🔄 Hot Module Replacement (HMR)
+- 🔍 TypeScript strict mode
+- 🎨 Tailwind CSS with semantic tokens
+- 📦 Lazy loading with React.lazy
+- 🛡️ Global error boundaries
+- 💾 Persistent state (localStorage)
+- 🔌 Auto-reconnecting WebSocket
+- 🔧 Vite dev proxy (no CORS issues)
 
 ## 📄 License
 
-This project is a demo application for educational and demonstration purposes.
+MIT License - See LICENSE file for details
 
 ## 🤝 Contributing
 
-This is a frontend-only demo. For production use, integrate with real backend services:
-- Replace mock authentication with real auth service
-- Connect WebSocket to real event stream
-- Integrate with camera management API
-- Add database for persistent storage
-
-## 📞 Support
-
-For questions or issues, please refer to the project documentation or create an issue in the repository.
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ---
 
