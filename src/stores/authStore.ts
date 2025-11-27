@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       login: async (email, password) => {
-        // Mock authentication
+        // Mock authentication - replace with API call
         const roleMap: Record<string, UserRole> = {
           'admin@surveillance.ai': 'Admin',
           'security@surveillance.ai': 'Security',
@@ -56,6 +56,11 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'surveillance-auth',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

@@ -144,6 +144,9 @@ export const useSiteStore = create<SiteState>()(
     {
       name: 'surveillance-sites',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        sites: state.sites,
+      }),
     }
   )
 );
